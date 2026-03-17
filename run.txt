@@ -1,0 +1,2 @@
+python main.py enter --image samples/test2.jpg
+ python main.py exit --plate-image samples/test2.jpg --gate gate1 --camera 0S
