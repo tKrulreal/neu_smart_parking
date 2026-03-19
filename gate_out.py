@@ -3,6 +3,7 @@ import datetime as dt
 
 from sqlalchemy import create_engine, text
 
+from iot_serial import send_iot_command
 from plate_read_demo import detect_plate_text
 from qr_camera_scan import scan_qr_from_camera
 from qr_reader import read_qr_from_image
@@ -80,6 +81,7 @@ def vehicle_exit(
                 gate_name=gate_name,
                 decision_status="DENY",
             )
+            send_iot_command("DENY")
             print("DENY - CANNOT_READ_PLATE")
             return False
 
@@ -94,6 +96,7 @@ def vehicle_exit(
                 log_plate_scan(
                     conn, plate, raw, score, plate_image_path, gate_name, "DENY"
                 )
+                send_iot_command("DENY")
                 print("DENY - QR_IMAGE_REQUIRED")
                 return False
             qr_student_id, payload, valid_qr = read_qr_from_image(
@@ -102,10 +105,12 @@ def vehicle_exit(
 
         if not qr_student_id:
             log_plate_scan(conn, plate, raw, score, plate_image_path, gate_name, "DENY")
+            send_iot_command("DENY")
             print("DENY - CANNOT_READ_QR")
             return False
         if not valid_qr:
             log_plate_scan(conn, plate, raw, score, plate_image_path, gate_name, "DENY")
+            send_iot_command("DENY")
             print(f"DENY - EXPIRED_OR_INVALID_QR ({payload})")
             return False
 
@@ -115,11 +120,13 @@ def vehicle_exit(
         ).fetchone()
         if not owner:
             log_plate_scan(conn, plate, raw, score, plate_image_path, gate_name, "DENY")
+            send_iot_command("DENY")
             print(f"DENY - UNKNOWN_VEHICLE ({plate})")
             return False
 
         if owner[0] != qr_student_id:
             log_plate_scan(conn, plate, raw, score, plate_image_path, gate_name, "DENY")
+            send_iot_command("DENY")
             print(
                 f"DENY - STUDENT_MISMATCH plate={plate} owner={owner[0]} qr={qr_student_id}"
             )
@@ -137,6 +144,7 @@ def vehicle_exit(
         ).fetchone()
         if not active:
             log_plate_scan(conn, plate, raw, score, plate_image_path, gate_name, "DENY")
+            send_iot_command("DENY")
             print(f"DENY - NO_ACTIVE_SESSION ({plate})")
             return False
 
@@ -155,6 +163,7 @@ def vehicle_exit(
             },
         )
         log_plate_scan(conn, plate, raw, score, plate_image_path, gate_name, "OPEN")
+        send_iot_command("OPEN_OUT")
 
     print(
         f"OPEN BARRIER OUT - plate={plate} raw={raw} score={score:.3f} "

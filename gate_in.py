@@ -4,6 +4,7 @@ import datetime as dt
 from sqlalchemy import create_engine, text
 
 from generate_qr import create_qr_for_student
+from iot_serial import send_iot_command
 from plate_read_demo import detect_plate_text
 
 DB_URL = "sqlite:///parking.db"
@@ -70,6 +71,7 @@ def vehicle_enter_from_image(image_path: str, gate_name: str = "gate2") -> bool:
                 gate_name=gate_name,
                 decision_status="DENY",
             )
+            send_iot_command("DENY")
             print("DENY - CANNOT_READ_PLATE")
             return False
 
@@ -79,6 +81,7 @@ def vehicle_enter_from_image(image_path: str, gate_name: str = "gate2") -> bool:
         ).fetchone()
         if not owner:
             log_plate_scan(conn, plate, raw, score, image_path, gate_name, "DENY")
+            send_iot_command("DENY")
             print(f"DENY - UNKNOWN_VEHICLE ({plate})")
             return False
 
@@ -94,6 +97,7 @@ def vehicle_enter_from_image(image_path: str, gate_name: str = "gate2") -> bool:
         ).fetchone()
         if active:
             log_plate_scan(conn, plate, raw, score, image_path, gate_name, "DENY")
+            send_iot_command("DENY")
             print(f"DENY - ALREADY_INSIDE ({plate})")
             return False
 
@@ -112,6 +116,7 @@ def vehicle_enter_from_image(image_path: str, gate_name: str = "gate2") -> bool:
             },
         )
         log_plate_scan(conn, plate, raw, score, image_path, gate_name, "OPEN")
+        send_iot_command("OPEN_IN")
 
     student_id = owner[0]
     try:
